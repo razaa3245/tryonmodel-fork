@@ -543,66 +543,137 @@ def predict_mask_with_model(crop):
 
 #         except Exception: continue
 #     return frame
+
+# def apply_hybrid_lens(frame, landmarks, lens_texture):
+#     h, w = frame.shape[:2]
+    
+#     LEFT_EYE_POINTS = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
+#     RIGHT_EYE_POINTS = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
+
+#     # Iris Center and Radius Points
+#     eye_configs = [
+#         (468, 471, LEFT_EYE_POINTS), # Left Eye
+#         (473, 476, RIGHT_EYE_POINTS)  # Right Eye
+#     ]
+
+#     for iris_idx, edge_idx, eye_pts in eye_configs:
+#         try:
+#             # 1. Coordinate Calculation with high precision
+#             cx, cy = int(landmarks[iris_idx].x * w), int(landmarks[iris_idx].y * h)
+#             ex, ey = int(landmarks[edge_idx].x * w), int(landmarks[edge_idx].y * h)
+            
+#             # Radius multiplier ko thora kam kiya (1.2) aur padding rakhi precision ke liye
+#             r = int(np.sqrt((cx - ex)**2 + (cy - ey)**2) * 1.2) 
+            
+#             y1, y2, x1, x2 = max(0, cy-r), min(h, cy+r), max(0, cx-r), min(w, cx+r)
+#             crop = frame[y1:y2, x1:x2].copy()
+#             if crop.size == 0: continue
+#             ch, cw = crop.shape[:2]
+
+#             # 2. Masking with Soft Edges (Anti-Aliasing)
+#             geo_mask = np.zeros((ch, cw), dtype=np.uint8)
+#             # 0.9 multiplier for tighter fit
+#             cv2.circle(geo_mask, (cw//2, ch//2), int(r * 0.9), 255, -1)
+
+#             eye_poly = np.array([[(landmarks[p].x*w - x1), (landmarks[p].y*h - y1)] for p in eye_pts], dtype=np.int32)
+#             occ_mask = np.zeros((ch, cw), dtype=np.uint8)
+#             cv2.fillPoly(occ_mask, [eye_poly], 255)
+
+#             final_mask = cv2.bitwise_and(geo_mask, occ_mask)
+#             # Gaussian blur ko 5x5 se 3x3 kiya taaki edges bohot zyada fade na hon
+#             final_mask = cv2.GaussianBlur(final_mask, (3, 3), 0)
+
+#             # 3. ADVANCED TEXTURE PROCESSING
+#             # Interpolation ko INTER_CUBIC kiya for smoother look on small crops
+#             lens_res = cv2.resize(lens_texture, (cw, ch), interpolation=cv2.INTER_CUBIC)
+            
+#             # DOOR SE TEXTURE CLEAR RAKHNE KE LIYE: Sharpening Filter
+#             # Yeh line door se print ko ajeeb hone se bachayegi
+#             kernel = np.array([[0, -0.5, 0], [-0.5, 3, -0.5], [0, -0.5, 0]])
+#             lens_res_sharp = cv2.filter2D(lens_res[:,:,:3], -1, kernel)
+
+#             if lens_res.shape[2] == 4:
+#                 # Alpha channels blending
+#                 alpha_tex = (lens_res[:, :, 3].astype(float) / 255.0)
+#                 alpha_mask = (final_mask.astype(float) / 255.0)
+                
+#                 # Combined alpha with Gamma Adjustment (0.8) for deeper blend
+#                 combined_alpha = np.power(alpha_tex * alpha_mask, 0.8)
+#                 combined_alpha_3d = cv2.merge([combined_alpha] * 3)
+                
+#                 # Foreground (Lens) and Background (Eye)
+#                 fg = lens_res_sharp.astype(float) * combined_alpha_3d
+#                 bg = crop.astype(float) * (1.0 - combined_alpha_3d)
+                
+#                 frame[y1:y2, x1:x2] = cv2.add(fg, bg).astype(np.uint8)
+
+#         except Exception: continue
+#     return frame
+
 def apply_hybrid_lens(frame, landmarks, lens_texture):
     h, w = frame.shape[:2]
     
     LEFT_EYE_POINTS = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
     RIGHT_EYE_POINTS = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
 
-    # Iris Center and Radius Points
     eye_configs = [
-        (468, 471, LEFT_EYE_POINTS), # Left Eye
-        (473, 476, RIGHT_EYE_POINTS)  # Right Eye
+        (468, 471, LEFT_EYE_POINTS), 
+        (473, 476, RIGHT_EYE_POINTS) 
     ]
 
     for iris_idx, edge_idx, eye_pts in eye_configs:
         try:
-            # 1. Coordinate Calculation with high precision
             cx, cy = int(landmarks[iris_idx].x * w), int(landmarks[iris_idx].y * h)
             ex, ey = int(landmarks[edge_idx].x * w), int(landmarks[edge_idx].y * h)
             
-            # Radius multiplier ko thora kam kiya (1.2) aur padding rakhi precision ke liye
-            r = int(np.sqrt((cx - ex)**2 + (cy - ey)**2) * 1.2) 
+            # Perfect Scale: 1.25 is ideal for covering natural iris
+            r = int(np.sqrt((cx - ex)**2 + (cy - ey)**2) * 1.25) 
             
             y1, y2, x1, x2 = max(0, cy-r), min(h, cy+r), max(0, cx-r), min(w, cx+r)
             crop = frame[y1:y2, x1:x2].copy()
             if crop.size == 0: continue
             ch, cw = crop.shape[:2]
 
-            # 2. Masking with Soft Edges (Anti-Aliasing)
+            # 1. SOFT MASKING (Anti-Aliasing)
             geo_mask = np.zeros((ch, cw), dtype=np.uint8)
-            # 0.9 multiplier for tighter fit
-            cv2.circle(geo_mask, (cw//2, ch//2), int(r * 0.9), 255, -1)
+            cv2.circle(geo_mask, (cw//2, ch//2), int(r * 0.95), 255, -1)
 
             eye_poly = np.array([[(landmarks[p].x*w - x1), (landmarks[p].y*h - y1)] for p in eye_pts], dtype=np.int32)
             occ_mask = np.zeros((ch, cw), dtype=np.uint8)
             cv2.fillPoly(occ_mask, [eye_poly], 255)
 
             final_mask = cv2.bitwise_and(geo_mask, occ_mask)
-            # Gaussian blur ko 5x5 se 3x3 kiya taaki edges bohot zyada fade na hon
-            final_mask = cv2.GaussianBlur(final_mask, (3, 3), 0)
+            # Higher blur for natural edge merging
+            final_mask = cv2.GaussianBlur(final_mask, (7, 7), 0)
 
-            # 3. ADVANCED TEXTURE PROCESSING
-            # Interpolation ko INTER_CUBIC kiya for smoother look on small crops
-            lens_res = cv2.resize(lens_texture, (cw, ch), interpolation=cv2.INTER_CUBIC)
+            # 2. HIGH QUALITY TEXTURE PREPARATION
+            lens_res = cv2.resize(lens_texture, (cw, ch), interpolation=cv2.INTER_LANCZOS4)
             
-            # DOOR SE TEXTURE CLEAR RAKHNE KE LIYE: Sharpening Filter
-            # Yeh line door se print ko ajeeb hone se bachayegi
-            kernel = np.array([[0, -0.5, 0], [-0.5, 3, -0.5], [0, -0.5, 0]])
-            lens_res_sharp = cv2.filter2D(lens_res[:,:,:3], -1, kernel)
+            # Sharpening to maintain detail at distance
+            kernel = np.array([[0, -0.1, 0], [-0.1, 1.4, -0.1], [0, -0.1, 0]])
+            lens_rgb = cv2.filter2D(lens_res[:,:,:3], -1, kernel)
 
             if lens_res.shape[2] == 4:
-                # Alpha channels blending
+                # 3. NATURAL BLENDING LOGIC
                 alpha_tex = (lens_res[:, :, 3].astype(float) / 255.0)
                 alpha_mask = (final_mask.astype(float) / 255.0)
                 
-                # Combined alpha with Gamma Adjustment (0.8) for deeper blend
-                combined_alpha = np.power(alpha_tex * alpha_mask, 0.8)
-                combined_alpha_3d = cv2.merge([combined_alpha] * 3)
+                # Dynamic Opacity: 0.85 makes it look less like "painted" on
+                combined_alpha = (alpha_tex * alpha_mask) * 0.85
+                alpha_3d = cv2.merge([combined_alpha] * 3)
+
+                # MULTIPLY BLENDING: Asli reflections aur shadows ko upar laane ke liye
+                # Yeh step "flat" look ko khatam karta hai
+                eye_float = crop.astype(float) / 255.0
+                lens_float = lens_rgb.astype(float) / 255.0
                 
-                # Foreground (Lens) and Background (Eye)
-                fg = lens_res_sharp.astype(float) * combined_alpha_3d
-                bg = crop.astype(float) * (1.0 - combined_alpha_3d)
+                # Blend: Multiply mode helps eye details show through the lens colors
+                multiplied = cv2.multiply(eye_float, lens_float) * 1.5 # Boost brightness
+                multiplied = np.clip(multiplied, 0, 1) * 255.0
+
+                # Final Composite
+                fg = multiplied * alpha_3d
+                bg = crop.astype(float) * (1.0 - alpha_3d)
                 
                 frame[y1:y2, x1:x2] = cv2.add(fg, bg).astype(np.uint8)
 
