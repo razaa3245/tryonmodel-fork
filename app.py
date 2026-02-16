@@ -565,7 +565,7 @@ def load_assets():
     interpreter = tf.lite.Interpreter(model_path="iris_pure_float32.tflite")
     interpreter.allocate_tensors()
     # Lens texture load karein (Ensure 7.png exists in images folder)
-    lens_img = cv2.imread("images/5.png", cv2.IMREAD_UNCHANGED)
+    lens_img = cv2.imread("images/6.png", cv2.IMREAD_UNCHANGED)
     return interpreter, lens_img
 
 interpreter, lens_img = load_assets()
