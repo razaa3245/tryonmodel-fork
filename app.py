@@ -454,7 +454,7 @@ def load_assets():
         return None, None
 
     # Load lens with Alpha Channel
-    lens_img = cv2.imread("images/2.png", cv2.IMREAD_UNCHANGED)
+    lens_img = cv2.imread("images/3.png", cv2.IMREAD_UNCHANGED)
     if lens_img is None:
         st.error("Lens image not found in images/1.png")
     return interpreter, lens_img
