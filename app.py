@@ -1193,21 +1193,13 @@ class VideoProcessor(VideoTransformerBase):
 st.set_page_config(page_title="Lens AR Pro", layout="wide")
 RTC_CONFIG = RTCConfiguration(
     {"iceServers": [
-        {"urls": ["stun:stun.l.google.com:19302"]}, 
+        {"urls": ["stun:stun.l.google.com:19302"]},
         {"urls": ["stun:stun1.l.google.com:19302"]},
-        # Yeh servers internet par better connection dhoondte hain
-        {"urls": ["stun:global.stun.twilio.com:3478?transport=udp"]}
+        {"urls": ["stun:stun.services.mozilla.com"]}, # Mozilla ka server
+        {"urls": ["stun:stun.l.google.com:19305"]}
     ]}
 )
-
-# Streamer settings mein isay use karein
-webrtc_streamer(
-    key="deploy-fix",
-    mode=WebRtcMode.SENDRECV, # Force send and receive
-    rtc_configuration=RTC_CONFIG,
-    media_stream_constraints={"video": True, "audio": False},
-    async_processing=True,
-)
+mode = st.sidebar.selectbox("Choose Mode", ["Live AR Video", "Photo Try-on"])
 if mode == "Live AR Video":
     st.title("📹 Live Lens Try-on")
     webrtc_streamer(
