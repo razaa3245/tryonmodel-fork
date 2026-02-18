@@ -1218,11 +1218,16 @@ RTC_CONFIG = RTCConfiguration({
     "iceServers": [
         {"urls": ["stun:stun.l.google.com:19302"]},
         {
-            "urls": ["turn:openrelay.metered.ca:80"],
+            "urls": [
+                "turn:openrelay.metered.ca:80",
+                "turn:openrelay.metered.ca:443",
+                "turn:openrelay.metered.ca:443?transport=tcp"
+            ],
             "username": "openrelayproject",
             "credential": "openrelayproject",
         },
-    ]
+    ],
+    "iceTransportPolicy": "all",
 })
 
 # --- 5. Main Streamlit UI ---
@@ -1237,7 +1242,7 @@ if mode == "Live AR Video":
         key="live-ar",
         video_processor_factory=VideoProcessor,
         rtc_configuration=RTC_CONFIG,
-        async_processing=True,
+        async_processing=False,
         media_stream_constraints={"video": True, "audio": False},
     )
 

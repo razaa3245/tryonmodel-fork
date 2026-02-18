@@ -1,9 +1,10 @@
 streamlit
-streamlit-webrtc
+streamlit-webrtc==0.47.1
 mediapipe==0.10.11
 opencv-python-headless
 numpy<2.0.0
-aiortc
+aiortc==1.6.0
+aioice==0.9.0
 #tflite-runtime
 av
 tensorflow-cpu
