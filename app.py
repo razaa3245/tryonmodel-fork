@@ -1042,61 +1042,123 @@
 #         self.frame_count += 1
 #         img = frame.to_ndarray(format="bgr24")
 #         img = cv2.flip(img, 1)
-#         img_proc = cv2.resize(img, (640, 480))
+#         img_proc = cv2.resize(img, (480, 360))
 #         results = face_mesh_tool.process(cv2.cvtColor(img_proc, cv2.COLOR_BGR2RGB))
         
 #         if results.multi_face_landmarks:
-#             run_model = (self.frame_count % 2 == 0)
+#             run_model = (self.frame_count % 3 == 0)
 #             img_proc, self.last_masks = apply_hybrid_lens(img_proc, results.multi_face_landmarks[0].landmark, lens_img, self.last_masks, run_model)
             
 #         return VideoFrame.from_ndarray(cv2.resize(img_proc, (img.shape[1], img.shape[0])), format="bgr24")
+
+# # # --- 4. Main Streamlit UI ---
+# # st.set_page_config(page_title="Lens AR Pro", layout="wide")
+# # mode = st.sidebar.selectbox("Choose Mode", ["Live AR Video", "Photo Try-on"])
+
+# # if mode == "Live AR Video":
+# #     st.title("📹 Live Lens Try-on")
+# #     webrtc_streamer(key="live-ar", video_processor_factory=VideoProcessor, 
+# #                     rtc_configuration=RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}),
+# #                     async_processing=True, media_stream_constraints={"video": True, "audio": False})
+
+# # else:
+# #     st.title("📸 Photo Capture Try-on")
+# #     img_file = st.camera_input("Take a high-quality selfie")
+
+# #     if img_file:
+# #         file_bytes = np.frombuffer(img_file.getvalue(), np.uint8)
+# #         cv2_img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        
+# #         with st.spinner("Applying HD Lenses..."):
+# #             rgb_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
+# #             results = face_mesh_tool.process(rgb_img)
+            
+# #             if results.multi_face_landmarks:
+# #                 # HD processing (is_hd=True, run_model=True)
+# #                 final_img, _ = apply_hybrid_lens(cv2_img, results.multi_face_landmarks[0].landmark, lens_img, is_hd=True)
+                
+# #                 st.image(final_img, channels="BGR", use_container_width=True, caption="HD Result")
+                
+# #                 # Download Button
+# #                 ret, buffer = cv2.imencode('.jpg', final_img)
+# #                 st.download_button("Download High-Res Photo", buffer.tobytes(), "my_new_look.jpg", "image/jpeg")
+# #             else:
+# #                 st.error("Face not detected. Please try again with better lighting.")
 
 # # --- 4. Main Streamlit UI ---
 # st.set_page_config(page_title="Lens AR Pro", layout="wide")
 # mode = st.sidebar.selectbox("Choose Mode", ["Live AR Video", "Photo Try-on"])
 
 # if mode == "Live AR Video":
+#     # ... (Aapka Live Video wala purana code yahan rahega) ...
 #     st.title("📹 Live Lens Try-on")
 #     webrtc_streamer(key="live-ar", video_processor_factory=VideoProcessor, 
-#                     rtc_configuration=RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}),
+#                     rtc_configuration=RTC_CONFIG, # Jo pehle set kiya tha
 #                     async_processing=True, media_stream_constraints={"video": True, "audio": False})
 
 # else:
-#     st.title("📸 Photo Capture Try-on")
-#     img_file = st.camera_input("Take a high-quality selfie")
+#     st.title("📸 Professional 3-Way Pose Capture")
+#     st.info("Please capture your photo from three different angles for a complete trial.")
 
-#     if img_file:
-#         file_bytes = np.frombuffer(img_file.getvalue(), np.uint8)
-#         cv2_img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+#     # 3 Tabs banayein har pose ke liye
+#     tab1, tab2, tab3 = st.tabs(["Front View", "Left Profile", "Right Profile"])
+    
+#     # Session state use karein taaki photos save rahein refresh hone par bhi
+#     if 'photos' not in st.session_state:
+#         st.session_state.photos = {"Front": None, "Left": None, "Right": None}
+
+#     with tab1:
+#         img_front = st.camera_input("Capture Front Pose", key="cam_front")
+#         if img_front: st.session_state.photos["Front"] = img_front
+
+#     with tab2:
+#         img_left = st.camera_input("Turn your head slightly Left", key="cam_left")
+#         if img_left: st.session_state.photos["Left"] = img_left
+
+#     with tab3:
+#         img_right = st.camera_input("Turn your head slightly Right", key="cam_right")
+#         if img_right: st.session_state.photos["Right"] = img_right
+
+#     st.markdown("---")
+
+#     # Final Results Section
+#     if any(st.session_state.photos.values()):
+#         st.subheader("Analysis Results")
+#         cols = st.columns(3)
         
-#         with st.spinner("Applying HD Lenses..."):
-#             rgb_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
-#             results = face_mesh_tool.process(rgb_img)
-            
-#             if results.multi_face_landmarks:
-#                 # HD processing (is_hd=True, run_model=True)
-#                 final_img, _ = apply_hybrid_lens(cv2_img, results.multi_face_landmarks[0].landmark, lens_img, is_hd=True)
-                
-#                 st.image(final_img, channels="BGR", use_container_width=True, caption="HD Result")
-                
-#                 # Download Button
-#                 ret, buffer = cv2.imencode('.jpg', final_img)
-#                 st.download_button("Download High-Res Photo", buffer.tobytes(), "my_new_look.jpg", "image/jpeg")
-#             else:
-#                 st.error("Face not detected. Please try again with better lighting.")
+#         # Ek loop mein teeno photos process karein
+#         for i, (pose, img_data) in enumerate(st.session_state.photos.items()):
+#             if img_data:
+#                 with cols[i]:
+#                     file_bytes = np.frombuffer(img_data.getvalue(), np.uint8)
+#                     cv2_img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+                    
+#                     with st.spinner(f"Processing {pose}..."):
+#                         rgb_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
+#                         results = face_mesh_tool.process(rgb_img)
+                        
+#                         if results.multi_face_landmarks:
+#                             # HD mode processing
+#                             final_img, _ = apply_hybrid_lens(cv2_img, results.multi_face_landmarks[0].landmark, lens_img, is_hd=True)
+#                             st.image(final_img, channels="BGR", use_column_width=True, caption=f"{pose} Look")
+                            
+#                             # Download individual result
+#                             ret, buffer = cv2.imencode('.jpg', final_img)
+#                             st.download_button(f"Download {pose}", buffer.tobytes(), f"{pose}_look.jpg", "image/jpeg")
+#                         else:
+#                             st.warning(f"Face not detected in {pose} view.")
+
+
+
 
 import cv2
 import numpy as np
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration, WebRtcMode
 import tensorflow as tf
 from av import VideoFrame
 import mediapipe as mp
 from mediapipe.python.solutions import face_mesh as mp_face_mesh
-import logging
-
-# Debug logs (optional but helpful)
-logging.basicConfig(level=logging.INFO)
 
 # --- 1. Resources Loading ---
 @st.cache_resource
@@ -1114,6 +1176,16 @@ face_mesh_tool = mp_face_mesh.FaceMesh(
     refine_landmarks=True,
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5
+)
+
+# --- WebRTC Configuration (IMPORTANT: Yeh define hona zaroori hai) ---
+RTC_CONFIG = RTCConfiguration(
+    {"iceServers": [
+        {"urls": ["stun:stun.l.google.com:19302"]},
+        {"urls": ["stun:stun1.l.google.com:19302"]},
+        {"urls": ["stun:stun.services.mozilla.com"]},
+        {"urls": ["stun:stun.cloudflare.com:3478"]}
+    ]}
 )
 
 # --- 2. Core Functions ---
@@ -1141,8 +1213,7 @@ def apply_hybrid_lens(frame, landmarks, lens_texture, last_masks=None, run_model
             
             y1, y2, x1, x2 = max(0, cy-r), min(h, cy+r), max(0, cx-r), min(w, cx+r)
             crop = frame[y1:y2, x1:x2].copy()
-            if crop.size == 0: 
-                continue
+            if crop.size == 0: continue
             ch, cw = crop.shape[:2]
 
             if run_model or last_masks is None or last_masks[idx] is None:
@@ -1156,35 +1227,25 @@ def apply_hybrid_lens(frame, landmarks, lens_texture, last_masks=None, run_model
             cv2.circle(geo_mask, (cw//2, ch//2), int(r * 0.92), 255, -1)
 
             occ_mask = np.zeros((ch, cw), dtype=np.uint8)
-            eye_poly = np.array(
-                [[(int(landmarks[p].x * w) - x1), (int(landmarks[p].y * h) - y1)] for p in eye_pts],
-                dtype=np.int32
-            )
+            eye_poly = np.array([[(int(landmarks[p].x * w) - x1), (int(landmarks[p].y * h) - y1)] for p in eye_pts], dtype=np.int32)
             cv2.fillPoly(occ_mask, [eye_poly], 255)
 
             final_mask = cv2.bitwise_and(cv2.bitwise_or(m_mask, geo_mask), occ_mask)
-            
             blur_size = (11, 11) if is_hd else (5, 5)
             final_mask = cv2.GaussianBlur(final_mask, blur_size, 0)
 
             lens_res = cv2.resize(lens_texture, (cw, ch), interpolation=cv2.INTER_LANCZOS4)
-
             if lens_res.shape[2] == 4:
                 alpha = (lens_res[:, :, 3].astype(float) / 255.0) * (final_mask.astype(float) / 255.0)
-                if is_hd:
-                    alpha *= 0.9
-                
+                if is_hd: alpha *= 0.9 
                 alpha_3d = cv2.merge([alpha] * 3)
                 fg = lens_res[:, :, :3].astype(float) * alpha_3d
                 bg = crop.astype(float) * (1.0 - alpha_3d)
                 frame[y1:y2, x1:x2] = cv2.add(fg, bg).astype(np.uint8)
-
-        except:
-            continue
-
+        except: continue
     return frame, current_masks
 
-# --- 3. Video Processor Class ---
+# --- 3. Video Processor ---
 class VideoProcessor(VideoTransformerBase):
     def __init__(self):
         self.frame_count = 0
@@ -1195,86 +1256,59 @@ class VideoProcessor(VideoTransformerBase):
         img = frame.to_ndarray(format="bgr24")
         img = cv2.flip(img, 1)
         img_proc = cv2.resize(img, (640, 480))
-
         results = face_mesh_tool.process(cv2.cvtColor(img_proc, cv2.COLOR_BGR2RGB))
         
         if results.multi_face_landmarks:
             run_model = (self.frame_count % 2 == 0)
-            img_proc, self.last_masks = apply_hybrid_lens(
-                img_proc,
-                results.multi_face_landmarks[0].landmark,
-                lens_img,
-                self.last_masks,
-                run_model
-            )
+            img_proc, self.last_masks = apply_hybrid_lens(img_proc, results.multi_face_landmarks[0].landmark, lens_img, self.last_masks, run_model)
             
-        return VideoFrame.from_ndarray(
-            cv2.resize(img_proc, (img.shape[1], img.shape[0])),
-            format="bgr24"
-        )
+        return VideoFrame.from_ndarray(cv2.resize(img_proc, (img.shape[1], img.shape[0])), format="bgr24")
 
-# --- 4. WebRTC Configuration (FIXED) ---
-RTC_CONFIG = RTCConfiguration({
-    "iceServers": [
-        {"urls": ["stun:stun.l.google.com:19302"]},
-        {
-            "urls": [
-                "turn:openrelay.metered.ca:80",
-                "turn:openrelay.metered.ca:443",
-                "turn:openrelay.metered.ca:443?transport=tcp"
-            ],
-            "username": "openrelayproject",
-            "credential": "openrelayproject",
-        },
-    ],
-    "iceTransportPolicy": "all",
-})
-
-# --- 5. Main Streamlit UI ---
+# --- 4. Main UI ---
 st.set_page_config(page_title="Lens AR Pro", layout="wide")
-
 mode = st.sidebar.selectbox("Choose Mode", ["Live AR Video", "Photo Try-on"])
 
 if mode == "Live AR Video":
     st.title("📹 Live Lens Try-on")
-
+    # Yahan ab error nahi aayega kyunki RTC_CONFIG upar define hai
     webrtc_streamer(
-        key="live-ar",
-        video_processor_factory=VideoProcessor,
+        key="live-ar-vfinal",
+        mode=WebRtcMode.SENDRECV,
+        video_processor_factory=VideoProcessor, 
         rtc_configuration=RTC_CONFIG,
-        async_processing=False,
-        media_stream_constraints={"video": True, "audio": False},
+        async_processing=True,
+        media_stream_constraints={"video": True, "audio": False}
     )
 
 else:
-    st.title("📸 Photo Capture Try-on")
+    st.title("📸 Professional 3-Way Pose Capture")
+    st.info("Sir, as requested: Please capture 3 angles for full analysis.")
 
-    img_file = st.camera_input("Take a high-quality selfie")
+    tab1, tab2, tab3 = st.tabs(["Front View", "Left View", "Right View"])
+    
+    if 'photos' not in st.session_state:
+        st.session_state.photos = {"Front": None, "Left": None, "Right": None}
 
-    if img_file:
-        file_bytes = np.frombuffer(img_file.getvalue(), np.uint8)
-        cv2_img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-        
-        with st.spinner("Applying HD Lenses..."):
-            rgb_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
-            results = face_mesh_tool.process(rgb_img)
-            
-            if results.multi_face_landmarks:
-                final_img, _ = apply_hybrid_lens(
-                    cv2_img,
-                    results.multi_face_landmarks[0].landmark,
-                    lens_img,
-                    is_hd=True
-                )
-                
-                st.image(final_img, channels="BGR", use_container_width=True, caption="HD Result")
-                
-                ret, buffer = cv2.imencode('.jpg', final_img)
-                st.download_button(
-                    "Download High-Res Photo",
-                    buffer.tobytes(),
-                    "my_new_look.jpg",
-                    "image/jpeg"
-                )
-            else:
-                st.error("Face not detected. Please try again with better lighting.")
+    with tab1:
+        c1 = st.camera_input("Capture Center", key="c1")
+        if c1: st.session_state.photos["Front"] = c1
+    with tab2:
+        c2 = st.camera_input("Capture Left", key="c2")
+        if c2: st.session_state.photos["Left"] = c2
+    with tab3:
+        c3 = st.camera_input("Capture Right", key="c3")
+        if c3: st.session_state.photos["Right"] = c3
+
+    if any(st.session_state.photos.values()):
+        st.write("### Trial Results")
+        cols = st.columns(3)
+        for i, (pose, img_data) in enumerate(st.session_state.photos.items()):
+            if img_data:
+                with cols[i]:
+                    file_bytes = np.frombuffer(img_data.getvalue(), np.uint8)
+                    cv2_img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+                    rgb_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
+                    results = face_mesh_tool.process(rgb_img)
+                    if results.multi_face_landmarks:
+                        final_img, _ = apply_hybrid_lens(cv2_img, results.multi_face_landmarks[0].landmark, lens_img, is_hd=True)
+                        st.image(final_img, channels="BGR", use_column_width=True, caption=pose)
