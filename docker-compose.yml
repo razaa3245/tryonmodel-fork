@@ -18,9 +18,7 @@ services:
 
     restart: unless-stopped
 
-    # 🔥 IMPORTANT: volume mount for live sync
     volumes:
-      - .:/app              # full project sync
-      - ./images:/app/images  # specifically images folder
+      - .:/app    # syncs full project including images/
 
     working_dir: /app
