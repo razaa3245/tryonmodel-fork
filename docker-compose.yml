@@ -4,23 +4,23 @@ services:
   app:
     build: .
     image: unet-iris:latest
-    shm_size: '2gb'
+    container_name: fastapi-model
+
     ports:
       - "8001:8001"
+
     environment:
       - PYTHONUNBUFFERED=1
-    restart: unless-stopped
+
+    shm_size: '2gb'
     mem_limit: 6g
     mem_reservation: 2g
 
-# If you need mongo, you can uncomment the block below. main.py currently
-# does not use MongoDB, so it's omitted by default.
-#
-#  mongo:
-#    image: mongo:6.0
-#    ports:
-#      - "27017:27017"
-#    volumes:
-#      - mongo_data:/data/db
+    restart: unless-stopped
 
-volumes: {}
+    # 🔥 IMPORTANT: volume mount for live sync
+    volumes:
+      - .:/app              # full project sync
+      - ./images:/app/images  # specifically images folder
+
+    working_dir: /app
