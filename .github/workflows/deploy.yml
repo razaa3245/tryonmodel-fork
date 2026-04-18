@@ -1,0 +1,24 @@
+name: Deploy AI Model
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to RunPod
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.RUNPOD_HOST }}
+          port: ${{ secrets.RUNPOD_PORT }}
+          username: root
+          key: ${{ secrets.RUNPOD_SSH_KEY }}
+          script: |
+            cd /workspace/tryonmodel-fork
+            git pull origin main
+            pip install -r requirements.txt -q
+            pkill -f "uvicorn" || true
+            sleep 1
+            nohup uvicorn main:app --host 0.0.0.0 --port 5000 > /workspace/ai.log 2>&1 &
