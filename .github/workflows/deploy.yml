@@ -18,7 +18,9 @@ jobs:
           script: |
             cd /workspace/tryonmodel-fork
             git pull origin main
-            pip install -r requirements.txt -q
+            pip install -r requirements.txt -q --root-user-action=ignore
             pkill -f "uvicorn" || true
-            sleep 1
+            sleep 2
             nohup uvicorn main:app --host 0.0.0.0 --port 5000 > /workspace/ai.log 2>&1 &
+            disown
+            echo "AI model started"
